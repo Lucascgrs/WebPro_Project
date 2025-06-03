@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..db.session import get_db
 from ..models.users import User
 from ..repositories.users import UserRepository
+from ..services.users import UserService
 from ..api.schemas.token import TokenPayload
 from ..utils.security import ALGORITHM
 from ..config import settings
@@ -33,7 +34,8 @@ def get_current_user(
         )
 
     repository = UserRepository(User, db)
-    user = repository.get(id=token_data.sub)
+    service = UserService(repository)
+    user = service.get(id=token_data.sub)
 
     if not user:
         raise HTTPException(

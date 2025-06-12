@@ -100,22 +100,18 @@ const App = {
                     </div>
                     <button type="submit" class="btn btn-block">Se connecter</button>
                 </form>
-                <p class="text-center mt-20">
-                    Vous n'avez pas de compte ? 
-                    <a href="#" class="nav-link" data-page="register">Inscrivez-vous</a>
-                </p>
             </div>
         `;
-
+    
         UI.setContent(html);
-
+    
         // Configurer le formulaire de connexion
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
+    
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-
+    
             try {
                 await Api.login(email, password);
                 UI.updateNavigation();
@@ -124,15 +120,6 @@ const App = {
             } catch (error) {
                 console.error('Erreur de connexion:', error);
             }
-        });
-
-        // Configurer les liens de navigation
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = e.target.getAttribute('data-page');
-                this.loadPage(page);
-            });
         });
     },
 
@@ -160,66 +147,52 @@ const App = {
                     </div>
                     <button type="submit" class="btn btn-block">S'inscrire</button>
                 </form>
-                <p class="text-center mt-20">
-                    Vous avez déjà un compte ? 
-                    <a href="#" class="nav-link" data-page="login">Connectez-vous</a>
-                </p>
             </div>
         `;
-
+    
         UI.setContent(html);
-
+    
         // Configurer le formulaire d'inscription
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
+    
             const fullName = document.getElementById('full_name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm_password').value;
-
+    
             // Vérifier que les mots de passe correspondent
             if (password !== confirmPassword) {
                 UI.showMessage('Les mots de passe ne correspondent pas', 'error');
                 return;
             }
-
+    
             // Vérifier la longueur du mot de passe
             if (password.length < 8) {
                 UI.showMessage('Le mot de passe doit contenir au moins 8 caractères', 'error');
                 return;
             }
-
+    
             // Vérifier que le nom complet n'est pas vide
             if (fullName.trim().length < 1) {
                 UI.showMessage('Le nom complet est requis', 'error');
                 return;
             }
-
+    
             try {
                 const userData = {
                     full_name: fullName,
                     email: email,
                     password: password
                 };
-
+    
                 await Api.register(userData);
-                UI.showMessage('Inscription réussie. Vous pouvez maintenant vous connecter.', 'success');
+                UI.showMessage('Inscription réussie', 'success');
                 this.loadPage('login');
             } catch (error) {
-                console.error('Erreur d\'inscription:', error);
-                // Afficher l'erreur à l'utilisateur
-                UI.showMessage(error.message || 'Une erreur est survenue lors de l\'inscription', 'error');
+                console.error('Erreur', error);
+                UI.showMessage(error.message || 'Une erreur est survenue', 'error');
             }
-        });
-
-        // Configurer les liens de navigation
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = e.target.getAttribute('data-page');
-                this.loadPage(page);
-            });
         });
     },
 
@@ -312,7 +285,7 @@ const App = {
     },
 
     // Setup event listeners for books page
-    setupBooksEventListeners: function() {
+    setupBooksEventListeners: function(isAdmin) {  // Ajout du paramètre isAdmin ici
         // Add book button
         if (isAdmin) {
             const addBookBtn = document.getElementById('add-book-btn');
@@ -352,7 +325,6 @@ const App = {
             }
         });
     },
-
     // Toggle search section visibility
     toggleSearchSection: function() {
         const searchSection = document.getElementById('search-section');
@@ -1342,11 +1314,11 @@ const App = {
                     
                     <div class="loans-stats mb-20">
                         <div class="stat-card">
-                            <h3>Total Emprunts</h3>
+                            <h3>Total</h3>
                             <p class="stat-number">${loans.length}</p>
                         </div>
                         <div class="stat-card">
-                            <h3>Emprunts Actifs</h3>
+                            <h3>En Cours</h3>
                             <p class="stat-number">${activeLoans.length}</p>
                         </div>
                         <div class="stat-card">
@@ -1354,7 +1326,7 @@ const App = {
                             <p class="stat-number stat-warning">${overdueLoans.length}</p>
                         </div>
                         <div class="stat-card">
-                            <h3>Retournés</h3>
+                            <h3>Passés</h3>
                             <p class="stat-number">${loans.filter(l => l.return_date).length}</p>
                         </div>
                     </div>
@@ -1363,7 +1335,7 @@ const App = {
             `;
 
             if (loans.length === 0) {
-                html += `<p>Aucun emprunt trouvé.</p>`;
+                html += `<p>Aucun emprunt</p>`;
             } else {
                 loans.forEach(loan => {
                     html += this.createLoanCard(loan);

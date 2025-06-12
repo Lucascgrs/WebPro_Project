@@ -226,15 +226,13 @@ const App = {
     // Charge la page des livres
     loadBooksPage: async function() {
         UI.showLoading();
-
+    
         try {
-            const [books, categories] = await Promise.all([
-                Api.getBooks(),
-                Api.getCategories().catch(() => []) // Categories are optional, don't fail if not available
-            ]);
+            // Nous n'avons plus besoin de charger les catégories
+            const books = await Api.getBooks();
             const user = Auth.getUser();
             const isAdmin = user && user.is_admin;
-
+    
             let html = `
                 <div class="books-page">
                     <div class="books-header">
@@ -253,12 +251,6 @@ const App = {
                                 </div>
                                 <div class="form-group">
                                     <input type="text" id="search-author" placeholder="Auteur" class="form-control">
-                                </div>
-                                <div class="form-group">
-                                    <select id="search-category" class="form-control">
-                                        <option value="">Toutes les catégories</option>
-                                        ${categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('')}
-                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <input type="number" id="search-year" placeholder="Année" class="form-control">
@@ -320,7 +312,7 @@ const App = {
     },
 
     // Setup event listeners for books page
-    setupBooksEventListeners: function(isAdmin) {
+    setupBooksEventListeners: function() {
         // Add book button
         if (isAdmin) {
             const addBookBtn = document.getElementById('add-book-btn');
@@ -328,25 +320,25 @@ const App = {
                 addBookBtn.addEventListener('click', () => this.showAddBookForm());
             }
         }
-
+    
         // Search toggle button
         const searchBtn = document.getElementById('search-books-btn');
         if (searchBtn) {
             searchBtn.addEventListener('click', () => this.toggleSearchSection());
         }
-
+    
         // Perform search button
         const performSearchBtn = document.getElementById('perform-search-btn');
         if (performSearchBtn) {
             performSearchBtn.addEventListener('click', () => this.performBookSearch());
         }
-
+    
         // Clear search button
         const clearSearchBtn = document.getElementById('clear-search-btn');
         if (clearSearchBtn) {
             clearSearchBtn.addEventListener('click', () => this.clearBookSearch());
         }
-
+    
         // Search on Enter key
         const searchInputs = ['search-query', 'search-author', 'search-year'];
         searchInputs.forEach(inputId => {
@@ -359,16 +351,6 @@ const App = {
                 });
             }
         });
-
-        // Search on category change
-        const categorySelect = document.getElementById('search-category');
-        if (categorySelect) {
-            categorySelect.addEventListener('change', () => {
-                if (categorySelect.value) {
-                    this.performBookSearch();
-                }
-            });
-        }
     },
 
     // Toggle search section visibility
@@ -389,15 +371,13 @@ const App = {
     performBookSearch: async function() {
         const query = document.getElementById('search-query')?.value.trim();
         const author = document.getElementById('search-author')?.value.trim();
-        const categoryId = document.getElementById('search-category')?.value;
         const year = document.getElementById('search-year')?.value.trim();
-
+    
         const searchParams = {};
         if (query) searchParams.query = query;
         if (author) searchParams.author = author;
-        if (categoryId) searchParams.category_id = parseInt(categoryId);
         if (year) searchParams.publication_year = parseInt(year);
-
+    
         try {
             UI.showLoading();
             const response = await Api.searchBooks(searchParams);
@@ -419,7 +399,6 @@ const App = {
     clearBookSearch: function() {
         document.getElementById('search-query').value = '';
         document.getElementById('search-author').value = '';
-        document.getElementById('search-category').value = '';
         document.getElementById('search-year').value = '';
         this.loadBooksPage();
     },
@@ -708,61 +687,36 @@ const App = {
         }
     },
 
-    // Charge la page de profil
     loadProfilePage: async function() {
         UI.showLoading();
-
+    
         try {
             let user = Auth.getUser();
-
+    
             if (!user) {
                 console.log('No user found in storage, fetching from API...');
                 await Api.getCurrentUser();
                 user = Auth.getUser();
             }
-
+    
             if (!user) {
                 throw new Error('Impossible de récupérer les informations utilisateur');
             }
-
+    
             console.log('User data:', user);
-
-            // Fetch user loan data (only for regular users, not admins)
-            let loanStats = null;
-            if (!user.is_admin) {
-                try {
-                    const [myLoans, myActiveLoans, myOverdueLoans] = await Promise.all([
-                        Api.getMyLoans(),
-                        Api.getMyActiveLoans(),
-                        Api.getMyOverdueLoans()
-                    ]);
-                    
-                    loanStats = {
-                        total: myLoans.length,
-                        active: myActiveLoans.length,
-                        overdue: myOverdueLoans.length,
-                        returned: myLoans.filter(l => l.return_date).length,
-                        recentLoans: myLoans.slice(0, 3) // Get 3 most recent loans
-                    };
-                } catch (loanError) {
-                    console.warn('Error fetching loan data for profile:', loanError);
-                    // Continue without loan data if there's an error
-                }
-            }
-
+    
             const initials = user.full_name
                 .split(' ')
                 .map(name => name.charAt(0))
                 .join('')
                 .toUpperCase();
-
+    
             let html = `
                 <div class="profile-container">
                     <div class="profile-header">
                         <div class="profile-avatar">${initials}</div>
                         <h2>${user.full_name}</h2>
                     </div>
-
                     <div class="profile-info">
                         <div class="profile-info-item">
                             <div class="profile-info-label">Email</div>
@@ -785,73 +739,13 @@ const App = {
                             <div class="profile-info-value">${user.address || 'Non spécifiée'}</div>
                         </div>
                     </div>
-            `;
-
-            // Add loan statistics section for regular users
-            if (!user.is_admin && loanStats) {
-                html += `
-                    <div class="profile-loans-section">
-                        <h3>Mes Emprunts</h3>
-                        <div class="loans-stats mb-20">
-                            <div class="stat-card">
-                                <h4>Total</h4>
-                                <p class="stat-number">${loanStats.total}</p>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Actifs</h4>
-                                <p class="stat-number">${loanStats.active}</p>
-                            </div>
-                            <div class="stat-card">
-                                <h4>En Retard</h4>
-                                <p class="stat-number ${loanStats.overdue > 0 ? 'stat-warning' : ''}">${loanStats.overdue}</p>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Retournés</h4>
-                                <p class="stat-number">${loanStats.returned}</p>
-                            </div>
-                        </div>
-                        
-                        ${loanStats.recentLoans.length > 0 ? `
-                            <div class="recent-loans">
-                                <h4>Emprunts Récents</h4>
-                                ${loanStats.recentLoans.map(loan => {
-                                    const isOverdue = loan.due_date && new Date(loan.due_date) < new Date() && !loan.return_date;
-                                    const isActive = !loan.return_date;
-                                    const statusClass = isOverdue ? 'overdue' : isActive ? 'active' : 'returned';
-                                    const statusText = isOverdue ? 'En retard' : isActive ? 'Actif' : 'Retourné';
-                                    
-                                    return `
-                                        <div class="recent-loan-item">
-                                            <div class="loan-book-info">
-                                                <strong>${loan.book?.title || 'N/A'}</strong>
-                                                <span class="loan-author">${loan.book?.author || 'N/A'}</span>
-                                            </div>
-                                            <div class="loan-status-info">
-                                                <span class="status ${statusClass}">${statusText}</span>
-                                                <span class="loan-date">${new Date(loan.loan_date).toLocaleDateString()}</span>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        ` : ''}
-                        
-                        <div class="profile-loans-actions">
-                            <button class="btn" onclick="App.loadPage('my-loans')">Voir tous mes emprunts</button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            html += `
                     <button class="btn" id="edit-profile-btn">Modifier le profil</button>
                 </div>
             `;
-
+    
             UI.hideLoading();
             UI.setContent(html);
-
-            // Configurer le bouton de modification du profil
+    
             document.getElementById('edit-profile-btn').addEventListener('click', () => {
                 this.loadEditProfilePage(user);
             });
@@ -1927,7 +1821,7 @@ const App = {
 
             let html = `
                 <div class="my-loans-page">
-                                                         <div class="my-loans-header">
+                    <div class="my-loans-header">
                         <h2 class="mb-20">Mes Emprunts</h2>
                         <p class="mb-20">Gérez vos emprunts de livres</p>
                     </div>
@@ -1950,29 +1844,6 @@ const App = {
                             <p class="stat-number">${myLoans.filter(l => l.return_date).length}</p>
                         </div>
                     </div>
-
-                    <div class="search-section" id="my-loan-search-section" style="display: none;">
-                        <div class="search-form">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <select id="search-my-loan-filter" class="form-control">
-                                        <option value="all">Tous mes emprunts</option>
-                                        <option value="active">Emprunts actifs</option>
-                                        <option value="overdue">Emprunts en retard</option>
-                                        <option value="returned">Emprunts retournés</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <button class="btn" id="perform-my-loan-search-btn">Filtrer</button>
-                                    <button class="btn" id="clear-my-loan-search-btn">Tout afficher</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="my-loans-actions mb-20">
-                        <button class="btn" id="search-my-loans-btn">Filtrer mes emprunts</button>
-                    </div>
                     
                     <div class="card-container" id="my-loans-container">
             `;
@@ -1980,10 +1851,9 @@ const App = {
             if (myLoans.length === 0) {
                 html += `
                     <div class="no-loans-message">
-                        <i class="fas fa-book-open fa-3x mb-20" style="color: #ccc;"></i>
+                        <img src="./images/no-loans.png" alt="Aucun emprunt" class="no-loans-image mb-20">
                         <h3>Aucun emprunt trouvé</h3>
                         <p>Vous n'avez pas encore emprunté de livres.</p>
-                        <button class="btn mt-20" onclick="App.loadPage('books')">Parcourir les livres</button>
                     </div>
                 `;
             } else {
@@ -1996,9 +1866,6 @@ const App = {
 
             UI.setContent(html);
             UI.hideLoading();
-            
-            // Setup event listeners
-            this.setupMyLoansEventListeners();
             
         } catch (error) {
             console.error('Erreur lors du chargement de mes emprunts:', error);

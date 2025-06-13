@@ -204,32 +204,6 @@ const Api = {
         }
     },
 
-    // Search books by title
-    searchBooksByTitle: async function(title) {
-        console.log('Searching books by title:', title);
-        try {
-            const result = await this.call(`/books/search/title/${encodeURIComponent(title)}`);
-            console.log('Title search results:', result);
-            return result;
-        } catch (error) {
-            console.error('Title search failed:', error);
-            throw error;
-        }
-    },
-
-    // Search books by author
-    searchBooksByAuthor: async function(author) {
-        console.log('Searching books by author:', author);
-        try {
-            const result = await this.call(`/books/search/author/${encodeURIComponent(author)}`);
-            console.log('Author search results:', result);
-            return result;
-        } catch (error) {
-            console.error('Author search failed:', error);
-            throw error;
-        }
-    },
-
     // Search book by ISBN
     searchBookByISBN: async function(isbn) {
         console.log('Searching book by ISBN:', isbn);
@@ -713,6 +687,30 @@ const Api = {
             return result;
         } catch (error) {
             console.error('Error fetching category by name:', error);
+            throw error;
+        }
+    },
+
+        // Search users with multiple criteria (admin only)
+    searchUsers: async function(searchParams = {}) {
+        console.log('Searching users with params:', searchParams);
+        
+        const queryParams = new URLSearchParams();
+        
+        // Add parameters if they exist
+        if (searchParams.name) queryParams.append('name', searchParams.name);
+        if (searchParams.email) queryParams.append('email', searchParams.email);
+        if (searchParams.id) queryParams.append('id', searchParams.id);
+        
+        const queryString = queryParams.toString();
+        const endpoint = `/users/search${queryString ? '?' + queryString : ''}`;
+        
+        try {
+            const response = await this.call(endpoint);
+            console.log('Users search results:', response);
+            return Array.isArray(response) ? response : [];
+        } catch (error) {
+            console.error('Users search failed:', error);
             throw error;
         }
     }

@@ -36,9 +36,9 @@ const App = {
             UI.showMessage('Vous devez être connecté pour accéder à cette page', 'error');
             page = 'login';
         }
-
+    
         // Vérifier si la page nécessite des droits d'admin
-        const adminRequiredPages = ['users', 'loans', 'categories'];
+        const adminRequiredPages = ['users', 'loans'];
         const user = Auth.getUser();
         if (adminRequiredPages.includes(page) && (!user || !user.is_admin)) {
             UI.showMessage('Accès non autorisé. Droits d\'administrateur requis.', 'error');
@@ -70,9 +70,6 @@ const App = {
                 break;
             case 'dashboard':
                 this.loadDashboardPage();
-                break;
-            case 'categories':
-                this.loadCategoriesPage();
                 break;
             default:
                 this.loadLoginPage();
@@ -784,52 +781,40 @@ const App = {
     // Charge la page de gestion des utilisateurs
     loadUsersPage: async function() {
         UI.showLoading();
-
+    
         try {
             const users = await Api.getUsers();
             const currentUser = Auth.getUser();
-
+    
             let html = `
-                <div class="users-page">
-                    <div class="users-header">
-                        <h2 class="mb-20">Gestion des Utilisateurs</h2>
-                        <div class="users-actions">
-                            <button class="btn" id="add-user-btn">Ajouter un utilisateur</button>
-                            <button class="btn" id="search-users-btn">Rechercher</button>
-                        </div>
+            <div class="users-page">
+                <div class="users-header">
+                    <h2 class="mb-20">Gestion des Utilisateurs</h2>
+                    <div class="users-actions">
+                        <button class="btn" id="search-users-btn">Rechercher</button>
                     </div>
-                    
-                    <div class="search-section" id="user-search-section" style="display: none;">
-                        <div class="search-form">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <input type="email" id="search-user-email" placeholder="Rechercher par email..." class="form-control">
-                                </div>
-                                <div class="form-group">
-                                    <button class="btn" id="perform-user-search-btn">Rechercher</button>
-                                    <button class="btn" id="clear-user-search-btn">Effacer</button>
-                                </div>
+                </div>
+                
+                <div class="search-section" id="user-search-section" style="display: none;">
+                    <div class="search-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="text" id="search-user-name" placeholder="Rechercher par nom..." class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <input type="email" id="search-user-email" placeholder="Rechercher par email..." class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <input type="number" id="search-user-id" placeholder="Rechercher par ID..." class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn" id="perform-user-search-btn">Rechercher</button>
+                                <button class="btn" id="clear-user-search-btn">Effacer</button>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="users-stats mb-20">
-                        <div class="stat-card">
-                            <h3>Total Utilisateurs</h3>
-                            <p class="stat-number">${users.length}</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Administrateurs</h3>
-                            <p class="stat-number">${users.filter(u => u.is_admin).length}</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Utilisateurs Actifs</h3>
-                            <p class="stat-number">${users.filter(u => u.is_active).length}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="card-container" id="users-container">
-            `;
+                </div>
+        `;
 
             if (users.length === 0) {
                 html += `<p>Aucun utilisateur trouvé.</p>`;
@@ -942,30 +927,39 @@ const App = {
 
     // Perform user search by email
     performUserSearch: async function() {
+        const name = document.getElementById('search-user-name')?.value.trim();
         const email = document.getElementById('search-user-email')?.value.trim();
-
-        if (!email) {
-            UI.showMessage('Veuillez saisir un email', 'error');
+        const id = document.getElementById('search-user-id')?.value.trim();
+    
+        if (!name && !email && !id) {
+            UI.showMessage('Veuillez saisir au moins un critère de recherche', 'error');
             return;
         }
-
+    
         try {
             UI.showLoading();
-            const user = await Api.getUserByEmail(email);
+            const searchParams = {};
+            if (name) searchParams.name = name;
+            if (email) searchParams.email = email;
+            if (id) searchParams.id = parseInt(id);
+    
+            const users = await Api.searchUsers(searchParams);
             const currentUser = Auth.getUser();
             
-            this.displayUserSearchResults([user], currentUser);
+            this.displayUserSearchResults(users, currentUser);
             UI.hideLoading();
         } catch (error) {
             console.error('Erreur lors de la recherche:', error);
-            UI.showMessage('Utilisateur non trouvé', 'error');
+            UI.showMessage('Aucun utilisateur trouvé', 'error');
             UI.hideLoading();
         }
     },
 
     // Clear user search and reload all users
     clearUserSearch: function() {
+        document.getElementById('search-user-name').value = '';
         document.getElementById('search-user-email').value = '';
+        document.getElementById('search-user-id').value = '';
         this.loadUsersPage();
     },
 
@@ -1275,20 +1269,19 @@ const App = {
     // Charge la page de gestion des emprunts
     loadLoansPage: async function() {
         UI.showLoading();
-
+    
         try {
             const [loans, activeLoans, overdueLoans] = await Promise.all([
                 Api.getLoans(),
                 Api.getActiveLoans(),
                 Api.getOverdueLoans()
             ]);
-
+    
             let html = `
                 <div class="loans-page">
                     <div class="loans-header">
                         <h2 class="mb-20">Gestion des Emprunts</h2>
                         <div class="loans-actions">
-                            <button class="btn" id="add-loan-btn">Nouvel emprunt</button>
                             <button class="btn" id="search-loans-btn">Rechercher</button>
                         </div>
                     </div>
@@ -2086,24 +2079,21 @@ const App = {
             this.loadPage('books');
             return;
         }
-
+    
         UI.showLoading();
-
+    
         try {
-            const [generalStats, mostBorrowedBooks, mostActiveUsers, monthlyLoans] = await Promise.all([
+            const [generalStats, mostBorrowedBooks] = await Promise.all([
                 Api.getGeneralStats(),
-                Api.getMostBorrowedBooks(5),
-                Api.getMostActiveUsers(5),
-                Api.getMonthlyLoans(6)
+                Api.getMostBorrowedBooks(5)
             ]);
-
+    
             let html = `
                 <div class="dashboard-page">
                     <div class="dashboard-header">
-                        <h2 class="mb-20">Tableau de Bord - Statistiques</h2>
-                        <p class="mb-20">Vue d'ensemble de votre bibliothèque</p>
+                        <h2 class="mb-20">Tableau de Bord</h2>
                     </div>
-
+    
                     <div class="dashboard-stats mb-30">
                         <div class="stat-card">
                             <h3>Total Livres</h3>
@@ -2121,287 +2111,31 @@ const App = {
                             <h3>Emprunts en Retard</h3>
                             <p class="stat-number stat-warning">${generalStats.overdue_loans || 0}</p>
                         </div>
-                    </div>
-
-                    <div class="dashboard-content">
-                        <div class="dashboard-section">
-                            <h3>Livres les Plus Empruntés</h3>
-                            <div class="stats-list">
-                                ${mostBorrowedBooks.length > 0 ? 
-                                    mostBorrowedBooks.map(book => `
-                                        <div class="stats-item">
-                                            <div class="stats-item-info">
-                                                <strong>${book.title || 'Titre inconnu'}</strong>
-                                                <span>par ${book.author || 'Auteur inconnu'}</span>
-                                            </div>
-                                            <div class="stats-badge">${book.loan_count || 0} emprunts</div>
-                                        </div>
-                                    `).join('') :
-                                    '<p class="no-data">Aucune donnée disponible</p>'
-                                }
-                            </div>
+                        <div class="stat-card">
+                            <h3>Moy. Retours à Temps</h3>
+                            <p class="stat-number">${generalStats.avg_ontime_returns || 0}%</p>
                         </div>
-
-                        <div class="dashboard-section">
-                            <h3>Utilisateurs les Plus Actifs</h3>
-                            <div class="stats-list">
-                                ${mostActiveUsers.length > 0 ? 
-                                    mostActiveUsers.map(user => `
-                                        <div class="stats-item">
-                                            <div class="stats-item-info">
-                                                <strong>${user.full_name || 'Nom inconnu'}</strong>
-                                                <span>${user.email || 'Email inconnu'}</span>
-                                            </div>
-                                            <div class="stats-badge">${user.loan_count || 0} emprunts</div>
-                                        </div>
-                                    `).join('') :
-                                    '<p class="no-data">Aucune donnée disponible</p>'
-                                }
-                            </div>
+                        <div class="stat-card">
+                            <h3>Moy. Retours en Retard</h3>
+                            <p class="stat-number">${generalStats.avg_late_returns || 0}%</p>
                         </div>
-
-                        <div class="dashboard-section">
-                            <h3>Emprunts par Mois (6 derniers mois)</h3>
-                            <div class="monthly-chart">
-                                ${monthlyLoans.length > 0 ? 
-                                    monthlyLoans.map(month => {
-                                        const maxValue = Math.max(...monthlyLoans.map(m => m.loan_count || 0));
-                                        const percentage = maxValue > 0 ? ((month.loan_count || 0) / maxValue) * 100 : 0;
-                                        return `
-                                            <div class="chart-bar">
-                                                <div class="bar" style="height: ${percentage}%"></div>
-                                                <div class="bar-label">${month.month || 'N/A'}</div>
-                                                <div class="bar-value">${month.loan_count || 0}</div>
-                                            </div>
-                                        `;
-                                    }).join('') :
-                                    '<p class="no-data">Aucune donnée disponible</p>'
-                                }
-                            </div>
+                        <div class="stat-card">
+                            <h3>Moy. Emprunts/Utilisateur</h3>
+                            <p class="stat-number">${generalStats.avg_loans_per_user || 0}</p>
                         </div>
                     </div>
                 </div>
             `;
-
+    
             UI.setContent(html);
             UI.hideLoading();
-
+    
         } catch (error) {
             console.error('Error loading dashboard:', error);
             UI.hideLoading();
             UI.showMessage('Erreur lors du chargement du tableau de bord', 'error');
         }
-    },
-
-    // =================== CATEGORIES MANAGEMENT (ADMIN ONLY) ===================
-
-    // Load categories management page
-    loadCategoriesPage: async function() {
-        const user = Auth.getUser();
-        if (!user || !user.is_admin) {
-            UI.showMessage('Accès non autorisé', 'error');
-            this.loadPage('books');
-            return;
-        }
-
-        UI.showLoading();
-
-        try {
-            const categories = await Api.getCategories();
-
-            let html = `
-                <div class="categories-page">
-                    <div class="categories-header">
-                        <h2 class="mb-20">Gestion des Catégories</h2>
-                        <div class="categories-actions">
-                            <button class="btn" id="add-category-btn">Ajouter une catégorie</button>
-                        </div>
-                    </div>
-                    
-                    <div class="categories-list">
-                        ${categories.length > 0 ? 
-                            categories.map(category => `
-                                <div class="category-card" data-category-id="${category.id}">
-                                    <div class="category-info">
-                                        <h3>${category.name}</h3>
-                                        <p class="category-description">${category.description || 'Aucune description'}</p>
-                                        <div class="category-meta">
-                                            <span class="category-books">${category.books?.length || 0} livres</span>
-                                            <span class="category-date">Créé le ${new Date(category.created_at).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                    <div class="category-actions">
-                                        <button class="btn-icon" onclick="App.editCategory(${category.id})" title="Modifier">
-                                            <i class="icon-edit">✏️</i>
-                                        </button>
-                                        <button class="btn-icon btn-danger" onclick="App.deleteCategory(${category.id})" title="Supprimer">
-                                            <i class="icon-delete">🗑️</i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('') :
-                            '<p class="no-categories">Aucune catégorie trouvée.</p>'
-                        }
-                    </div>
-                </div>
-            `;
-
-            UI.setContent(html);
-            UI.hideLoading();
-
-            // Setup event handlers
-            document.getElementById('add-category-btn')?.addEventListener('click', () => {
-                this.showAddCategoryForm();
-            });
-
-        } catch (error) {
-            console.error('Error loading categories:', error);
-            UI.hideLoading();
-            UI.showMessage('Erreur lors du chargement des catégories', 'error');
-        }
-    },
-
-    // Show add category form
-    showAddCategoryForm: function() {
-        const html = `
-            <div class="form-container">
-                <h2 class="text-center mb-20">Ajouter une Catégorie</h2>
-                <form id="add-category-form">
-                    <div class="form-group">
-                        <label for="category-name">Nom de la catégorie <span class="required">*</span></label>
-                        <input type="text" id="category-name" class="form-control" required maxlength="50">
-                    </div>
-                    <div class="form-group">
-                        <label for="category-description">Description</label>
-                        <textarea id="category-description" class="form-control" rows="3" maxlength="200"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn">Ajouter la catégorie</button>
-                        <button type="button" class="btn btn-secondary" onclick="App.loadPage('categories')">Annuler</button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        UI.setContent(html);
-
-        // Setup form handler
-        document.getElementById('add-category-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleAddCategory();
-        });
-    },
-
-    // Handle add category form submission
-    handleAddCategory: async function() {
-        const categoryData = {
-            name: document.getElementById('category-name').value.trim(),
-            description: document.getElementById('category-description').value.trim() || null
-        };
-
-        // Validation
-        if (!categoryData.name) {
-            UI.showMessage('Le nom de la catégorie est requis', 'error');
-            return;
-        }
-
-        try {
-            await Api.createCategory(categoryData);
-            UI.showMessage('Catégorie ajoutée avec succès', 'success');
-            this.loadPage('categories');
-        } catch (error) {
-            console.error('Erreur lors de l\'ajout de la catégorie:', error);
-            UI.showMessage(error.message || 'Erreur lors de l\'ajout de la catégorie', 'error');
-        }
-    },
-
-    // Edit category
-    editCategory: async function(categoryId) {
-        try {
-            UI.showLoading();
-            const category = await Api.getCategory(categoryId);
-            UI.hideLoading();
-            
-            this.showEditCategoryForm(category);
-        } catch (error) {
-            console.error('Erreur lors de la récupération de la catégorie:', error);
-            UI.hideLoading();
-            UI.showMessage('Erreur lors de la récupération de la catégorie', 'error');
-        }
-    },
-
-    // Show edit category form
-    showEditCategoryForm: function(category) {
-        const html = `
-            <div class="form-container">
-                <h2 class="text-center mb-20">Modifier la Catégorie</h2>
-                <form id="edit-category-form">
-                    <div class="form-group">
-                        <label for="edit-category-name">Nom de la catégorie <span class="required">*</span></label>
-                        <input type="text" id="edit-category-name" class="form-control" value="${category.name}" required maxlength="50">
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-category-description">Description</label>
-                        <textarea id="edit-category-description" class="form-control" rows="3" maxlength="200">${category.description || ''}</textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn">Modifier la catégorie</button>
-                        <button type="button" class="btn btn-secondary" onclick="App.loadPage('categories')">Annuler</button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        UI.setContent(html);
-
-        // Setup form handler
-        document.getElementById('edit-category-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleEditCategory(category.id);
-        });
-    },
-
-    // Handle edit category form submission
-    handleEditCategory: async function(categoryId) {
-        const categoryData = {
-            name: document.getElementById('edit-category-name').value.trim(),
-            description: document.getElementById('edit-category-description').value.trim() || null
-        };
-
-        // Validation
-        if (!categoryData.name) {
-            UI.showMessage('Le nom de la catégorie est requis', 'error');
-            return;
-        }
-
-        try {
-            await Api.updateCategory(categoryId, categoryData);
-            UI.showMessage('Catégorie modifiée avec succès', 'success');
-            this.loadPage('categories');
-        } catch (error) {
-            console.error('Erreur lors de la modification de la catégorie:', error);
-            UI.showMessage(error.message || 'Erreur lors de la modification de la catégorie', 'error');
-        }
-    },
-
-    // Delete category with confirmation
-    deleteCategory: async function(categoryId) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ? Cette action est irréversible.')) {
-            return;
-        }
-
-        try {
-            UI.showLoading();
-            await Api.deleteCategory(categoryId);
-            UI.hideLoading();
-            UI.showMessage('Catégorie supprimée avec succès', 'success');
-            this.loadPage('categories');
-        } catch (error) {
-            console.error('Erreur lors de la suppression de la catégorie:', error);
-            UI.hideLoading();
-            UI.showMessage(error.message || 'Erreur lors de la suppression de la catégorie', 'error');
-        }
-    },
+    }
 };
 
 // Initialiser l'application au chargement de la page

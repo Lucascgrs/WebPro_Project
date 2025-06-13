@@ -14,5 +14,3 @@ const CONFIG = {
         TOKEN_EXPIRY: 'token_expiry'
     }
 };
-
-export default config;

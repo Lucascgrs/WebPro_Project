@@ -76,9 +76,9 @@ const Api = {
         const formData = new URLSearchParams();
         formData.append('username', email);
         formData.append('password', password);
-
+    
         UI.showLoading();
-
+    
         try {
             const response = await fetch(`${CONFIG.API_URL}/auth/login`, {
                 method: 'POST',
@@ -87,19 +87,25 @@ const Api = {
                 },
                 body: formData
             });
-
+    
             const data = await response.json();
-
+    
             if (!response.ok) {
                 throw new Error(data.detail || 'Échec de la connexion');
             }
-
+    
+            // Vérifier que Auth est défini et a la méthode setToken
+            if (typeof Auth === 'undefined' || typeof Auth.setToken !== 'function') {
+                console.error('Auth or Auth.setToken is not properly defined');
+                throw new Error('Erreur de configuration de l\'authentification');
+            }
+    
             // Stocker le token
             Auth.setToken(data.access_token);
-
+    
             // Récupérer les informations utilisateur
             await this.getCurrentUser();
-
+    
             UI.hideLoading();
             return data;
         } catch (error) {

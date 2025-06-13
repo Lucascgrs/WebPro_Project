@@ -1,6 +1,5 @@
 // Gestion de l'authentification
 const Auth = {
-    // Stocke le token JWT et les informations utilisateur
     setToken: function(token, expiresIn = CONFIG.TOKEN_EXPIRY) {
         const now = new Date();
         const expiryTime = now.getTime() + expiresIn;

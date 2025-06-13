@@ -716,6 +716,30 @@ const Api = {
     },
 
     // In your frontend/js/api.js, update or add the uploadProfilePhoto method:
+    async updateProfile(data) {
+        try {
+            const response = await fetch(`${this.baseUrl}/users/me`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Erreur lors de la mise à jour du profil');
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error in updateProfile:', error);
+            throw error;
+        }
+    },
+
     uploadProfilePhoto: async function(formData) {
         try {
             const response = await fetch(`${this.baseUrl}/users/me/photo`, {
@@ -727,11 +751,11 @@ const Api = {
             });
             
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Erreur lors du téléchargement de la photo');
+                throw new Error('Erreur lors du téléchargement de la photo');
             }
             
             const result = await response.json();
+            // Update the stored user data
             Auth.setUser(result);
             return result;
         } catch (error) {

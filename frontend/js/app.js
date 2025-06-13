@@ -731,28 +731,20 @@ const App = {
         const html = `
             <div class="form-container">
                 <h2 class="text-center mb-20">Modifier le profil</h2>
-                
-                <!-- Profile photo section -->
-                <div class="profile-photo-section">
-                    <div class="profile-photo-container" id="photo-upload-area">
-                        ${user.profile_photo 
-                            ? `<img src="${user.profile_photo}" alt="Photo de profil" class="profile-photo">` 
-                            : `<div class="profile-photo-placeholder">
-                                <span class="initials">
-                                    ${user.full_name.split(' ').map(name => name.charAt(0)).join('').toUpperCase()}
-                                </span>
-                                <span class="upload-icon">📷</span>
-                            </div>`
-                        }
-                        <div class="photo-overlay">
-                            <span class="upload-text">Cliquez pour changer la photo</span>
-                        </div>
-                    </div>
+                <div class="profile-photo-container">
+                    ${user.profile_photo 
+                        ? `<img src="${user.profile_photo}" alt="Photo de profil" class="profile-photo">`
+                        : `<div class="profile-photo-placeholder">
+                            ${user.full_name.split(' ').map(name => name.charAt(0)).join('').toUpperCase()}
+                           </div>`
+                    }
                     <input type="file" id="profile-photo" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-secondary" id="change-photo-btn">
+                        Changer la photo
+                    </button>
                 </div>
-    
-                <!-- Profile form -->
                 <form id="edit-profile-form">
+                    <!-- Existing form fields -->
                     <div class="form-group">
                         <label for="full_name">Nom complet</label>
                         <input type="text" id="full_name" class="form-control" value="${user.full_name}" required>
@@ -772,122 +764,34 @@ const App = {
     
         UI.setContent(html);
     
-        // Add these styles to your CSS (in frontend/css/style.css or equivalent)
-        const styles = `
-            <style>
-                .profile-photo-section {
-                    text-align: center;
-                    margin-bottom: 30px;
-                }
-    
-                .profile-photo-container {
-                    position: relative;
-                    width: 150px;
-                    height: 150px;
-                    margin: 0 auto;
-                    cursor: pointer;
-                    border-radius: 50%;
-                    overflow: hidden;
-                    border: 3px solid #e0e0e0;
-                    transition: all 0.3s ease;
-                }
-    
-                .profile-photo-container:hover {
-                    border-color: #007bff;
-                }
-    
-                .profile-photo {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                }
-    
-                .profile-photo-placeholder {
-                    width: 100%;
-                    height: 100%;
-                    background-color: #f8f9fa;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-direction: column;
-                    color: #666;
-                }
-    
-                .initials {
-                    font-size: 48px;
-                    font-weight: bold;
-                    margin-bottom: 10px;
-                }
-    
-                .upload-icon {
-                    font-size: 24px;
-                    opacity: 0.7;
-                }
-    
-                .photo-overlay {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background-color: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-    
-                .profile-photo-container:hover .photo-overlay {
-                    opacity: 1;
-                }
-    
-                .upload-text {
-                    color: white;
-                    font-size: 14px;
-                    text-align: center;
-                    padding: 10px;
-                }
-            </style>
-        `;
-    
-        // Add styles to the document
-        document.head.insertAdjacentHTML('beforeend', styles);
-    
-        // Handle photo upload when clicking anywhere in the photo container
-        document.getElementById('photo-upload-area').addEventListener('click', () => {
+        // Handle photo upload
+        document.getElementById('change-photo-btn').addEventListener('click', () => {
             document.getElementById('profile-photo').click();
         });
     
-        // Handle file selection
         document.getElementById('profile-photo').addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
                 try {
-                    UI.showLoading();
-                    
                     const formData = new FormData();
                     formData.append('file', file);
     
+                    UI.showLoading();
                     const updatedUser = await Api.uploadProfilePhoto(formData);
-                    
                     UI.hideLoading();
+    
                     UI.showMessage('Photo de profil mise à jour avec succès', 'success');
-                    
-                    // Reload the current page to show the new photo
-                    this.loadEditProfilePage(updatedUser);
+                    this.loadProfilePage(); // Reload the profile page
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage('Erreur lors de la mise à jour de la photo de profil', 'error');
-                    console.error('Error uploading photo:', error);
                 }
             }
         });
     
-        // Handle form submission (your existing code)
+        // Handle form submission (existing code)
         document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            // Your existing form submission code...
+            // Your existing form submission code
         });
     },
 

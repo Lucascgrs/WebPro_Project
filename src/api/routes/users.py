@@ -193,15 +193,15 @@ def get_user_by_email(
     return user
 
 
-# Create upload directory if it doesn't exist
+# Add this at the top with your other imports
 UPLOAD_DIR = Path("static/profile_photos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-@router.post("/me/photo", response_model=schemas.User)
+@router.post("/me/photo", response_model=User)
 async def upload_profile_photo(
     file: UploadFile = File(...),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """
     Upload a profile photo for the current user.
@@ -215,7 +215,7 @@ async def upload_profile_photo(
             )
         
         # Create unique filename
-        file_extension = Path(file.filename).suffix
+        file_extension = os.path.splitext(file.filename)[1]
         filename = f"user_{current_user.id}{file_extension}"
         file_path = UPLOAD_DIR / filename
         
@@ -224,16 +224,20 @@ async def upload_profile_photo(
             shutil.copyfileobj(file.file, buffer)
         
         # Update user profile in database
+        repository = UserRepository(UserModel, db)
+        service = UserService(repository)
+        
+        # Create the URL path for the photo
         photo_url = f"/static/profile_photos/{filename}"
-        user = current_user
-        user.profile_photo = photo_url
-        db.commit()
-        db.refresh(user)
+        user = service.update(
+            db_obj=current_user,
+            obj_in={"profile_photo": photo_url}
+        )
         
         return user
         
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=f"Erreur lors du téléchargement de la photo: {str(e)}"
         )

@@ -2,6 +2,7 @@
 const CONFIG = {
     // URL de base de l'API
     API_URL: 'http://localhost:8000/api/v2',
+    apiBaseUrl: '/api/v2',
 
     // Durée de vie du token en millisecondes (8 jours)
     TOKEN_EXPIRY: 8 * 24 * 60 * 60 * 1000,
@@ -13,3 +14,5 @@ const CONFIG = {
         TOKEN_EXPIRY: 'token_expiry'
     }
 };
+
+export default config;

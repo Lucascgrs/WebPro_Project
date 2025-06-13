@@ -713,5 +713,30 @@ const Api = {
             console.error('Users search failed:', error);
             throw error;
         }
+    },
+
+    // In your frontend/js/api.js, update or add the uploadProfilePhoto method:
+    uploadProfilePhoto: async function(formData) {
+        try {
+            const response = await fetch(`${this.baseUrl}/users/me/photo`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Erreur lors du téléchargement de la photo');
+            }
+            
+            const result = await response.json();
+            Auth.setUser(result);
+            return result;
+        } catch (error) {
+            console.error('Error uploading profile photo:', error);
+            throw error;
+        }
     }
 };

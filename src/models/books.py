@@ -16,7 +16,8 @@ class Book(Base):
     publisher = Column(String(100), nullable=True)
     language = Column(String(50), nullable=True)
     pages = Column(Integer, nullable=True)
-    
+    categories = relationship("Category", secondary=book_category, back_populates="books")
+
     # Contraintes
     __table_args__ = (
         CheckConstraint('publication_year >= 1000 AND publication_year <= %d' % datetime.now().year, name='check_publication_year'),

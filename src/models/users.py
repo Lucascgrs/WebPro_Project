@@ -5,6 +5,7 @@ from .base import Base
 
 
 class User(Base):
+    # Existing fields...
     email = Column(String(100), nullable=False, unique=True, index=True)
     hashed_password = Column(String(100), nullable=False)
     full_name = Column(String(100), nullable=False)
@@ -12,6 +13,8 @@ class User(Base):
     is_admin = Column(Boolean, default=False, nullable=False)
     phone = Column(String(20), nullable=True)
     address = Column(String(200), nullable=True)
+    # Add new field
+    profile_photo = Column(String(255), nullable=True)  # Store the photo URL/path
     
     # Contraintes
     __table_args__ = (

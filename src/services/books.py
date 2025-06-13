@@ -42,7 +42,21 @@ class BookService(BaseService[Book, BookCreate, BookUpdate]):
         if existing_book:
             raise ValueError("L'ISBN est déjà utilisé")
         
-        return self.repository.create(obj_in=obj_in)
+        # Extract category_ids before creating the book
+        category_ids = obj_in.category_ids
+        
+        # Create a dict of book data without category_ids
+        book_data = obj_in.dict(exclude={'category_ids'})
+        
+        # Create the book
+        book = self.repository.create(obj_in=book_data)
+        
+        # Add categories if any were specified
+        if category_ids:
+            for category_id in category_ids:
+                self.repository.add_category(book_id=book.id, category_id=category_id)
+                
+        return book
     
     def update_quantity(self, *, book_id: int, quantity_change: int) -> Book:
         """

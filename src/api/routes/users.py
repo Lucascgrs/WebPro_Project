@@ -9,6 +9,11 @@ from ...repositories.users import UserRepository
 from ...services.users import UserService
 from ..dependencies import get_current_active_user, get_current_admin_user
 
+from fastapi import File, UploadFile
+import shutil
+import os
+from pathlib import Path
+
 router = APIRouter()
 
 
@@ -186,3 +191,49 @@ def get_user_by_email(
             detail="Utilisateur non trouvé"
         )
     return user
+
+
+# Create upload directory if it doesn't exist
+UPLOAD_DIR = Path("static/profile_photos")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+@router.post("/me/photo", response_model=schemas.User)
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_active_user)
+) -> Any:
+    """
+    Upload a profile photo for the current user.
+    """
+    try:
+        # Validate file type
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=400,
+                detail="Le fichier doit être une image"
+            )
+        
+        # Create unique filename
+        file_extension = Path(file.filename).suffix
+        filename = f"user_{current_user.id}{file_extension}"
+        file_path = UPLOAD_DIR / filename
+        
+        # Save file
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Update user profile in database
+        photo_url = f"/static/profile_photos/{filename}"
+        user = current_user
+        user.profile_photo = photo_url
+        db.commit()
+        db.refresh(user)
+        
+        return user
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

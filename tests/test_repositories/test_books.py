@@ -22,6 +22,7 @@ def test_create_book(db_session: Session):
     }
     
     book = repository.create(obj_in=book_data)
+    repository.add_category(book_id=book.id, category_id=category_id)
     
     assert book.id is not None
     assert book.title == "Test Book"

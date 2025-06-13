@@ -726,90 +726,90 @@ const App = {
         }
     },
 
-    // In your frontend/js/app.js, update the loadEditProfilePage function:
-    loadEditProfilePage: function(user) {
-        const html = `
-            <div class="form-container">
-                <h2 class="text-center mb-20">Modifier le profil</h2>
-                <div class="profile-photo-container">
-                    ${user.profile_photo 
-                        ? `<img src="${user.profile_photo}" alt="Photo de profil" class="profile-photo">`
-                        : `<div class="profile-photo-placeholder">
-                            ${user.full_name.split(' ').map(name => name.charAt(0)).join('').toUpperCase()}
-                        </div>`
-                    }
-                    <input type="file" id="profile-photo" accept="image/*" style="display: none;">
-                    <button type="button" class="btn btn-secondary" id="change-photo-btn">
-                        Changer la photo
-                    </button>
-                </div>
-                <form id="edit-profile-form">
-                    <div class="form-group">
-                        <label for="full_name">Nom complet</label>
-                        <input type="text" id="full_name" class="form-control" value="${user.full_name}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Téléphone</label>
-                        <input type="text" id="phone" class="form-control" value="${user.phone || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label for="address">Adresse</label>
-                        <textarea id="address" class="form-control">${user.address || ''}</textarea>
-                    </div>
-                    <button type="submit" class="btn btn-block">Enregistrer les modifications</button>
-                </form>
-            </div>
-        `;
-
-        UI.setContent(html);
-
-        // Handle photo upload
-        document.getElementById('change-photo-btn').addEventListener('click', () => {
-            document.getElementById('profile-photo').click();
-        });
-
-        document.getElementById('profile-photo').addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    UI.showLoading();
-                    const updatedUser = await Api.uploadProfilePhoto(formData);
-                    UI.hideLoading();
-
-                    UI.showMessage('Photo de profil mise à jour avec succès', 'success');
-                    this.loadProfilePage(); // Reload the profile page
-                } catch (error) {
-                    UI.hideLoading();
-                    UI.showMessage('Erreur lors de la mise à jour de la photo de profil', 'error');
+// In your frontend/js/app.js, update the loadEditProfilePage function:
+loadEditProfilePage: function(user) {
+    const html = `
+        <div class="form-container">
+            <h2 class="text-center mb-20">Modifier le profil</h2>
+            <div class="profile-photo-container">
+                ${user.profile_photo 
+                    ? `<img src="${user.profile_photo}" alt="Photo de profil" class="profile-photo">`
+                    : `<div class="profile-photo-placeholder">
+                        ${user.full_name.split(' ').map(name => name.charAt(0)).join('').toUpperCase()}
+                       </div>`
                 }
-            }
-        });
+                <input type="file" id="profile-photo" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn-secondary" id="change-photo-btn">
+                    Changer la photo
+                </button>
+            </div>
+            <form id="edit-profile-form">
+                <div class="form-group">
+                    <label for="full_name">Nom complet</label>
+                    <input type="text" id="full_name" class="form-control" value="${user.full_name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Téléphone</label>
+                    <input type="text" id="phone" class="form-control" value="${user.phone || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="address">Adresse</label>
+                    <textarea id="address" class="form-control">${user.address || ''}</textarea>
+                </div>
+                <button type="submit" class="btn btn-block">Enregistrer les modifications</button>
+            </form>
+        </div>
+    `;
 
-        // Handle form submission
-        document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const userData = {
-                full_name: document.getElementById('full_name').value.trim(),
-                phone: document.getElementById('phone').value.trim() || null,
-                address: document.getElementById('address').value.trim() || null
-            };
+    UI.setContent(html);
 
+    // Handle photo upload
+    document.getElementById('change-photo-btn').addEventListener('click', () => {
+        document.getElementById('profile-photo').click();
+    });
+
+    document.getElementById('profile-photo').addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
             try {
+                const formData = new FormData();
+                formData.append('file', file);
+
                 UI.showLoading();
-                await Api.updateCurrentUser(userData);
+                const updatedUser = await Api.uploadProfilePhoto(formData);
                 UI.hideLoading();
-                UI.showMessage('Profil mis à jour avec succès', 'success');
-                App.loadProfilePage(); // Reload the profile page
+
+                UI.showMessage('Photo de profil mise à jour avec succès', 'success');
+                this.loadProfilePage(); // Reload the profile page
             } catch (error) {
                 UI.hideLoading();
-                UI.showMessage(error.message || 'Erreur lors de la mise à jour du profil', 'error');
+                UI.showMessage('Erreur lors de la mise à jour de la photo de profil', 'error');
             }
-        });
-    },
+        }
+    });
+
+    // Handle form submission
+    document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const userData = {
+            full_name: document.getElementById('full_name').value.trim(),
+            phone: document.getElementById('phone').value.trim() || null,
+            address: document.getElementById('address').value.trim() || null
+        };
+
+        try {
+            UI.showLoading();
+            await Api.updateCurrentUser(userData);
+            UI.hideLoading();
+            UI.showMessage('Profil mis à jour avec succès', 'success');
+            App.loadProfilePage(); // Reload the profile page
+        } catch (error) {
+            UI.hideLoading();
+            UI.showMessage(error.message || 'Erreur lors de la mise à jour du profil', 'error');
+        }
+    });
+},
 
     // =================== USERS MANAGEMENT (ADMIN ONLY) ===================
 

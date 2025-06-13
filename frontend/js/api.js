@@ -742,7 +742,7 @@ const Api = {
 
     uploadProfilePhoto: async function(formData) {
         try {
-            const response = await fetch(`${this.baseUrl}/users/me/photo`, {
+            const response = await fetch(`${CONFIG.API_URL}/users/me/photo`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${Auth.getToken()}`
@@ -751,10 +751,15 @@ const Api = {
             });
             
             if (!response.ok) {
-                throw new Error('Erreur lors du téléchargement de la photo');
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Erreur lors du téléchargement de la photo');
             }
             
             const result = await response.json();
+            
+            // Important : mettre à jour le chemin complet de la photo
+            result.profile_photo = `${CONFIG.API_URL}${result.profile_photo}`;
+            
             // Update the stored user data
             Auth.setUser(result);
             return result;

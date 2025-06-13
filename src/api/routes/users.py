@@ -194,7 +194,7 @@ def get_user_by_email(
 
 
 # Add this at the top with your other imports
-UPLOAD_DIR = Path("static/profile_photos")
+UPLOAD_DIR = Path("frontend/static/profile_photos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/me/photo", response_model=User)
